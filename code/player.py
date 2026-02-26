@@ -3,7 +3,10 @@ from settings import *
 class Player(pygame.sprite.Sprite):
     def __init__(self, pos, groups, collision_sprites):
         super().__init__(groups)
-        self.image = pygame.image.load('images/player/down/0.png').convert_alpha()
+
+        self.main_dir = os.path.split(os.path.abspath(__file__))[0]
+
+        self.image = pygame.image.load(os.path.join(self.main_dir, '..', 'images', 'player', 'down', '0.png')).convert_alpha()
         self.rect = self.image.get_frect(center=pos)
         self.hitbox_rect = self.rect.inflate(-60, 0)
         self.direction = pygame.Vector2()

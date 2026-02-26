@@ -1,8 +1,9 @@
 from settings import *
 from player import Player
 from sprites import *
-
 from random import randint
+from pytmx.util_pygame import load_pygame
+import os
 
 
 class Game:
@@ -12,18 +13,28 @@ class Game:
         self.clock = pygame.time.Clock()
         self.running = True
 
+        self.main_dir = os.path.split(os.path.abspath(__file__))[0]
+
         pygame.display.set_caption("Vampire Survivor")
 
         self.all_sprites = pygame.sprite.Group()
         self.collision_sprites = pygame.sprite.Group()
 
-        self.player = Player((WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2), self.all_sprites, self.collision_sprites)
+        self.setup()
 
-        for i in range(6):
-            pos = randint(0, WINDOW_WIDTH), randint(0, WINDOW_HEIGHT)
-            size = randint(60, 100), randint(60, 100)
+        self.player = Player((500, 300), self.all_sprites, self.collision_sprites)
 
-            CollisionSprite(pos, size, (self.all_sprites, self.collision_sprites))
+    def setup(self):
+        game_map = load_pygame(os.path.join(self.main_dir, '..', 'data', 'maps', 'world.tmx'))
+
+        for x, y, image in game_map.get_layer_by_name('Ground').tiles():
+            Sprite((x * TILE_SIZE, y * TILE_SIZE), image, self.all_sprites)
+
+        for obj in game_map.get_layer_by_name('Objects'):
+            CollisionSprite((obj.x, obj.y), obj.image, (self.all_sprites, self.collision_sprites))
+
+        for collision in game_map.get_layer_by_name("Collisions"):
+            CollisionSprite((collision.x, collision.y), pygame.Surface((collision.width, collision.height)), self.collision_sprites)
 
     def run(self):
         while self.running:
@@ -46,4 +57,3 @@ class Game:
 if __name__ == '__main__':
     game = Game()
     game.run()
-
