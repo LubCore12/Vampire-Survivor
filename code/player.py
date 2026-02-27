@@ -31,8 +31,6 @@ class Player(pygame.sprite.Sprite):
                     surf = pygame.image.load(full_path).convert_alpha()
                     self.frames[state].append(surf)
 
-        print(self.frames)
-
     def input(self):
         keys = pygame.key.get_pressed()
 

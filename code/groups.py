@@ -1,5 +1,5 @@
 from settings import *
-from sprites import Sprite
+from sprites import *
 
 class AllSprites(pygame.sprite.Group):
     def __init__(self):
@@ -14,8 +14,5 @@ class AllSprites(pygame.sprite.Group):
         ground_sprites = [sprite for sprite in self if hasattr(sprite, 'is_ground')]
         object_sprites = [sprite for sprite in self if not hasattr(sprite, 'is_ground')]
 
-        for sprite in ground_sprites:
-            self.display_surface.blit(sprite.image, sprite.rect.topleft + self.offset)
-
-        for sprite in sorted(object_sprites, key=lambda sprite: sprite.rect.centery):
+        for sprite in (*ground_sprites, *sorted(object_sprites, key=lambda sprite: (type(sprite) is Gun, sprite.rect.centery))):
             self.display_surface.blit(sprite.image, sprite.rect.topleft + self.offset)
