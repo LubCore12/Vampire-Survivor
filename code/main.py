@@ -1,3 +1,5 @@
+import pygame
+
 from settings import *
 from player import Player
 from sprites import *
@@ -34,8 +36,18 @@ class Game:
         self.enemy_names = ['bat', 'blob', 'skeleton']
         self.enemy_event = pygame.event.custom_type()
         self.enemy_list = list(filter(lambda x: x.name == 'Enemy', self.game_map.get_layer_by_name("Entities")))
+        self.enemy_spawn_time = 500
 
-        pygame.time.set_timer(self.enemy_event, 500)
+        pygame.time.set_timer(self.enemy_event, self.enemy_spawn_time)
+
+        self.shoot_sound = pygame.mixer.Sound(os.path.join(self.main_dir, '..', 'audio', 'shoot.wav'))
+        self.shoot_sound.set_volume(0.2)
+        self.impact_sound = pygame.mixer.Sound(os.path.join(self.main_dir, '..', 'audio', 'impact.ogg'))
+        self.impact_sound.set_volume(0.2)
+        self.music = pygame.mixer.Sound(os.path.join(self.main_dir, '..', 'audio', 'music.wav'))
+        self.music.set_volume(0.05)
+        self.music.play(loops=-1)
+
 
     def load_images(self):
         self.bullet_surf = pygame.image.load(os.path.join(self.main_dir, '..', 'images', 'gun', 'bullet.png')).convert_alpha()
@@ -60,6 +72,7 @@ class Game:
             Bullet(self.gun, self.bullet_surf, (self.all_sprites, self.bullet_sprites), self.enemy_sprites)
             self.can_shoot = False
             self.shoot_time = pygame.time.get_ticks()
+            self.shoot_sound.play()
 
     def gun_timer(self):
         if not self.can_shoot:
@@ -83,7 +96,17 @@ class Game:
                 self.player = Player((entity.x, entity.y), self.all_sprites, self.collision_sprites, self.enemy_sprites)
                 self.gun = Gun(self.player, self.all_sprites)
 
-    def kill(self):
+    def kill_enemies(self):
+        for bullet in self.bullet_sprites:
+            collision_sprites = pygame.sprite.spritecollide(bullet, self.enemy_sprites, dokill=False, collided=collide_mask)
+
+            if collision_sprites:
+                for sprite in collision_sprites:
+                    sprite.destroy()
+                bullet.kill()
+                self.impact_sound.play()
+
+    def kill_player(self):
         if pygame.sprite.spritecollide(self.player, self.enemy_sprites, dokill=False, collided=collide_mask):
             self.running = False
 
@@ -97,25 +120,18 @@ class Game:
                 if event.type == self.enemy_event:
                     enemy = choice(self.enemy_list)
 
+                    pygame.time.set_timer(self.enemy_event, int(self.enemy_spawn_time))
+
                     while (pygame.Vector2((enemy.x, enemy.y)) - pygame.Vector2(self.player.rect.center)).magnitude() < 1000:
                         enemy = choice(self.enemy_list)
 
                     enemy_type = self.enemy_frames[choice(self.enemy_names)]
-                    Enemy((enemy.x, enemy.y), enemy_type, self.player, (self.all_sprites, self.enemy_sprites), self.collision_sprites)
+                    Enemy((enemy.x, enemy.y), enemy_type, self.player, (self.all_sprites, self.enemy_sprites), self.enemy_sprites, self.collision_sprites)
 
             self.gun_timer()
             self.input()
-            self.kill()
-            self.all_sprites.update(delta_time)
+            self.kill_player()
+            self.kill_enemies()
 
-            self.displayScreen.fill('black')
-
-            self.all_sprites.draw(self.player.rect.center)
-            pygame.display.update()
-
-        pygame.quit()
-
-
-if __name__ == '__main__':
-    game = Game()
-    game.run()
+            if self.enemy_spawn_time > 200:
+                self.enemy_spawn_time -= 1 * delta_time

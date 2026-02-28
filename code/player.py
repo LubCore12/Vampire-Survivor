@@ -16,7 +16,7 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_frect(center=pos)
         self.hitbox_rect = self.rect.inflate(-60, -90)
         self.direction = pygame.Vector2()
-        self.speed = 300
+        self.speed = 350
 
         self.collision_sprites = collision_sprites
         self.enemies = enemies

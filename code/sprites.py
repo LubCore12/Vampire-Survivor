@@ -26,6 +26,8 @@ class Bullet(pygame.sprite.Sprite):
     def __init__(self, gun, surf, groups, enemies):
         super().__init__(groups)
 
+        self.main_dir = os.path.split(os.path.abspath(__file__))[0]
+
         self.image = surf
         self.enemies = enemies
         self.gun_direction = gun.player_direction
@@ -35,17 +37,11 @@ class Bullet(pygame.sprite.Sprite):
         self.spawn_time = pygame.time.get_ticks()
         self.lifetime = 5000
 
-    def kill_enemies(self):
-        if pygame.sprite.spritecollide(self, self.enemies, dokill=True, collided=collide_mask):
-            self.kill()
-
     def update(self, delta_time):
         self.rect.center += self.gun_direction * delta_time * self.bullet_speed
 
         if pygame.time.get_ticks() - self.spawn_time >= self.lifetime:
             self.kill()
-
-        self.kill_enemies()
 
 
 class Gun(pygame.sprite.Sprite):
@@ -84,7 +80,7 @@ class Gun(pygame.sprite.Sprite):
 
 
 class Enemy(pygame.sprite.Sprite):
-    def __init__(self, pos, frames, player, groups, collision_sprites):
+    def __init__(self, pos, frames, player, groups, enemy_group, collision_sprites):
         super().__init__(groups)
 
         self.frames = frames
@@ -92,11 +88,18 @@ class Enemy(pygame.sprite.Sprite):
         self.frame_key = 0
         self.player = player
         self.rect = self.image.get_frect(center=pos).inflate(-60, -20)
-        self.collision_sprites = collision_sprites
-
         self.speed = 300
 
+        self.collision_sprites = collision_sprites
+        self.enemy_group = enemy_group
+
+        self.death_time = 0
+        self.death_duration = 400
+
     def move(self, delta_time):
+        if self.speed <= 375:
+            self.speed += 1 * delta_time
+
         direction = pygame.Vector2(self.rect.x - self.player.rect.x, self.rect.y - self.player.rect.y).normalize()
 
         self.rect.centerx -= direction.x * self.speed * delta_time
@@ -108,6 +111,21 @@ class Enemy(pygame.sprite.Sprite):
         self.frame_key = self.frame_key + 5 * delta_time
         self.image = self.frames[int(self.frame_key) % len(self.frames)]
 
+    def destroy(self):
+        self.death_time = pygame.time.get_ticks()
+
+        surf = pygame.mask.from_surface(self.image).to_surface()
+        surf.set_colorkey('black')
+        self.image = surf
+        self.enemy_group.remove(self)
+
+    def death_timer(self):
+        if pygame.time.get_ticks() - self.death_time >= self.death_duration:
+            self.kill()
+
     def update(self, delta_time):
-        self.animate(delta_time)
-        self.move(delta_time)
+        if self.death_time == 0:
+            self.animate(delta_time)
+            self.move(delta_time)
+        else:
+            self.death_timer()
