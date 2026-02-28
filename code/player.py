@@ -1,7 +1,11 @@
+from pygame.sprite import collide_mask
+
 from settings import *
+from collision import *
+
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, pos, groups, collision_sprites):
+    def __init__(self, pos, groups, collision_sprites, enemies):
         super().__init__(groups)
 
         self.main_dir = os.path.split(os.path.abspath(__file__))[0]
@@ -10,11 +14,12 @@ class Player(pygame.sprite.Sprite):
         self.state, self.frame_index = 'down', 0
         self.image = pygame.image.load(os.path.join(self.main_dir, '..', 'images', 'player', 'down', '0.png')).convert_alpha()
         self.rect = self.image.get_frect(center=pos)
-        self.hitbox_rect = self.rect.inflate(-60, -50)
+        self.hitbox_rect = self.rect.inflate(-60, -90)
         self.direction = pygame.Vector2()
         self.speed = 300
 
         self.collision_sprites = collision_sprites
+        self.enemies = enemies
 
     def load_images(self):
         self.frames = {
@@ -45,23 +50,9 @@ class Player(pygame.sprite.Sprite):
 
     def move(self, delta_time):
         self.hitbox_rect.centerx += self.direction.x * self.speed * delta_time
-        self.collision('horizontal')
+        Collision.collision('horizontal', self.direction, self.hitbox_rect, self.collision_sprites)
         self.hitbox_rect.centery += self.direction.y * self.speed * delta_time
-        self.collision('vertical')
-
-    def collision(self, direction):
-        for sprite in self.collision_sprites:
-            if sprite.rect.colliderect(self.hitbox_rect):
-                if direction == 'horizontal':
-                    if self.direction.x > 0:
-                        self.hitbox_rect.right = sprite.rect.left
-                    if self.direction.x < 0:
-                        self.hitbox_rect.left = sprite.rect.right
-                if direction == 'vertical':
-                    if self.direction.y > 0:
-                        self.hitbox_rect.bottom = sprite.rect.top
-                    if self.direction.y < 0:
-                        self.hitbox_rect.top = sprite.rect.bottom
+        Collision.collision('vertical', self.direction, self.hitbox_rect, self.collision_sprites)
 
     def animate(self, delta_time):
         if self.direction.x != 0:

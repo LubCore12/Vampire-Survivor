@@ -4,6 +4,7 @@ from sprites import *
 from pytmx.util_pygame import load_pygame
 import os
 from groups import AllSprites
+from random import choice
 
 
 class Game:
@@ -19,8 +20,10 @@ class Game:
         self.all_sprites = AllSprites()
         self.collision_sprites = pygame.sprite.Group()
         self.bullet_sprites = pygame.sprite.Group()
+        self.enemy_sprites = pygame.sprite.Group()
 
         self.load_images()
+        self.game_map = load_pygame(os.path.join(self.main_dir, '..', 'data', 'maps', 'world.tmx'))
 
         self.setup()
 
@@ -28,14 +31,33 @@ class Game:
         self.shoot_time = 0
         self.gun_cooldown = 100
 
+        self.enemy_names = ['bat', 'blob', 'skeleton']
+        self.enemy_event = pygame.event.custom_type()
+        self.enemy_list = list(filter(lambda x: x.name == 'Enemy', self.game_map.get_layer_by_name("Entities")))
+
+        pygame.time.set_timer(self.enemy_event, 500)
+
     def load_images(self):
         self.bullet_surf = pygame.image.load(os.path.join(self.main_dir, '..', 'images', 'gun', 'bullet.png')).convert_alpha()
+
+        self.enemy_frames = {
+            'bat': [],
+            'blob': [],
+            'skeleton': []
+        }
+
+        for enemy in self.enemy_frames:
+            for _, _, file_names in os.walk(os.path.join(self.main_dir, '..', 'images', 'enemies', enemy)):
+                for file_name in sorted(file_names, key=lambda x: int(x.split('.')[0])):
+                    surf = pygame.image.load(
+                        os.path.join(self.main_dir, '..', 'images', 'enemies', enemy, file_name)).convert_alpha()
+                    self.enemy_frames[enemy].append(surf)
 
     def input(self):
         mouse_keys = pygame.mouse.get_just_pressed()
 
         if mouse_keys[0] and self.can_shoot:
-            Bullet(self.gun, self.bullet_surf, (self.all_sprites, self.bullet_sprites))
+            Bullet(self.gun, self.bullet_surf, (self.all_sprites, self.bullet_sprites), self.enemy_sprites)
             self.can_shoot = False
             self.shoot_time = pygame.time.get_ticks()
 
@@ -47,21 +69,23 @@ class Game:
                 self.can_shoot = True
 
     def setup(self):
-        game_map = load_pygame(os.path.join(self.main_dir, '..', 'data', 'maps', 'world.tmx'))
-
-        for x, y, image in game_map.get_layer_by_name('Ground').tiles():
+        for x, y, image in self.game_map.get_layer_by_name('Ground').tiles():
             Sprite((x * TILE_SIZE, y * TILE_SIZE), image, self.all_sprites)
 
-        for obj in game_map.get_layer_by_name('Objects'):
+        for obj in self.game_map.get_layer_by_name('Objects'):
             CollisionSprite((obj.x, obj.y), obj.image, (self.all_sprites, self.collision_sprites))
 
-        for collision in game_map.get_layer_by_name("Collisions"):
+        for collision in self.game_map.get_layer_by_name("Collisions"):
             CollisionSprite((collision.x, collision.y), pygame.Surface((collision.width, collision.height)), self.collision_sprites)
 
-        for entity in game_map.get_layer_by_name("Entities"):
+        for entity in self.game_map.get_layer_by_name("Entities"):
             if entity.name == "Player":
-                self.player = Player((entity.x, entity.y), self.all_sprites, self.collision_sprites)
+                self.player = Player((entity.x, entity.y), self.all_sprites, self.collision_sprites, self.enemy_sprites)
                 self.gun = Gun(self.player, self.all_sprites)
+
+    def kill(self):
+        if pygame.sprite.spritecollide(self.player, self.enemy_sprites, dokill=False, collided=collide_mask):
+            self.running = False
 
     def run(self):
         while self.running:
@@ -70,9 +94,18 @@ class Game:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.running = False
+                if event.type == self.enemy_event:
+                    enemy = choice(self.enemy_list)
+
+                    while (pygame.Vector2((enemy.x, enemy.y)) - pygame.Vector2(self.player.rect.center)).magnitude() < 1000:
+                        enemy = choice(self.enemy_list)
+
+                    enemy_type = self.enemy_frames[choice(self.enemy_names)]
+                    Enemy((enemy.x, enemy.y), enemy_type, self.player, (self.all_sprites, self.enemy_sprites), self.collision_sprites)
 
             self.gun_timer()
             self.input()
+            self.kill()
             self.all_sprites.update(delta_time)
 
             self.displayScreen.fill('black')
