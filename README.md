@@ -43,13 +43,6 @@ faster - The game becomes more intense and challenging
 Make sure you have:
 
 -   Python 3.12
--   Pygame
-
-Install Pygame with:
-
-``` bash
-pip install pygame
-```
 
 ------------------------------------------------------------------------
 
@@ -67,7 +60,18 @@ git clone https://github.com/LubCore12/Vampire-Survivor.git
 cd your-repository
 ```
 
-3.  Run the game:
+3. Create venv and download requirements
+
+```bash
+python -m venv venv
+# Linux/Mac
+source venv/bin/activate
+# Windows
+.\venv\Scripts\activate.bat
+pip install -r requirements.txt
+```
+
+4. Run the game:
 
 ``` bash
 python code/main.py

@@ -135,3 +135,16 @@ class Game:
 
             if self.enemy_spawn_time > 200:
                 self.enemy_spawn_time -= 1 * delta_time
+
+            self.all_sprites.update(delta_time)
+
+            self.displayScreen.fill('black')
+
+            self.all_sprites.draw(self.player.rect.center)
+            pygame.display.update()
+
+        pygame.quit()
+
+if __name__ == '__main__':
+    game = Game()
+    game.run()
